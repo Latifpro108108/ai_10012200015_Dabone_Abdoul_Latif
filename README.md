@@ -17,13 +17,13 @@ A complete RAG (Retrieval-Augmented Generation) chatbot using Ghana election res
 | `part-a` | Data Prep | ✅ |
 | `part-b` | Retrieval | ✅ |
 | `part-c` | Prompts | ✅ |
-| `part-d` | Pipeline & Evaluation (Part D & E) | ✅ |
+| `part-d-e` | Pipeline & Evaluation | ✅ |
 
 ## Progress
 - **Part A**: Cleaned data and created 991 chunks (CSV/PDF).
 - **Part B**: Built FAISS index and hybrid search system.
 - **Part C**: Designed prompt templates and context management.
-- **Part D & E**: Integrated full backend pipeline with staged logging and adversarial testing.
+- **Part D & E**: Integrated full backend pipeline and conducted critical evaluation with adversarial testing.
 
 ## Tech Stack
 - Python (Pandas, PyMuPDF, FAISS)

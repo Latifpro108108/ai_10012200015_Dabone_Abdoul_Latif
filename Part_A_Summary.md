@@ -71,8 +71,8 @@ Chunk 2:     C D E F G H   ← C D E are repeated (overlap)
 
 | Strategy | Chunk Size | Overlap | PDF Chunks Created |
 |---|---|---|---|
-| Small | 100 words | 20 words | 1,144 |
-| Large | 300 words | 50 words | 366 |
+| Small | 100 words | 20 words | 1,175 |
+| Large | 300 words | 50 words | 376 |
 
 ### Which one we chose and why
 
@@ -88,6 +88,6 @@ For the CSV we used **1 row = 1 chunk**. Each row is already one complete fact (
 
 At the end of Part A we saved two files:
 - `chunks/csv_chunks.json` — 615 chunks from the election data
-- `chunks/pdf_chunks.json` — 366 chunks from the budget document
+- `chunks/pdf_chunks.json` — 376 chunks from the budget document
 
 These files are used directly in Part B to create the embeddings and build the search index.

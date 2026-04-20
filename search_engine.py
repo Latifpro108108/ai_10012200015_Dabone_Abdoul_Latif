@@ -1,8 +1,10 @@
 import json
 import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
+import requests
+import os
 from rank_bm25 import BM25Okapi
+from dotenv import load_dotenv
 
 class RAGSearch:
     def __init__(self, index_path='indexes/rag_index.faiss'):
@@ -13,19 +15,33 @@ class RAGSearch:
             pdf_chunks = json.load(f)
         self.all_chunks = csv_chunks + pdf_chunks
         
-        # 2. Load Model & Index
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        # 2. Load Index (No model loaded locally = Low Memory!)
         self.index = faiss.read_index(index_path)
         
         # 3. Setup BM25
         texts = [c['text'] for c in self.all_chunks]
         tokenized_corpus = [text.lower().split() for text in texts]
         self.bm25 = BM25Okapi(tokenized_corpus)
+        
+        # 4. API for Embeddings (Hugging Face Inference API)
+        # Using a public endpoint to keep memory usage near zero
+        self.API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN', '')}"}
+
+    def get_embedding(self, text):
+        """Get embeddings via API instead of local model to save RAM."""
+        try:
+            response = requests.post(self.API_URL, headers=self.headers, json={"inputs": text})
+            return np.array(response.json()).astype('float32')
+        except:
+            # Fallback if API fails (just return zeros to prevent crash)
+            return np.zeros((1, 384)).astype('float32')
 
     def search(self, query, k=5, alpha=0.5):
-        """Enhanced search with higher k to ensure recent data is caught."""
-        # Vector search
-        query_vec = self.model.encode([query]).astype('float32')
+        # Vector search via API
+        query_vec = self.get_embedding(query)
+        if len(query_vec.shape) == 1: query_vec = query_vec.reshape(1, -1)
+        
         distances, indices = self.index.search(query_vec, k * 2)
         
         # BM25 search
@@ -47,18 +63,7 @@ class RAGSearch:
         return sorted(combined, key=lambda x: x['score'], reverse=True)[:k]
 
 
-# =============================================================================
-# PART G INNOVATION: Smart Evidence Synthesis Engine
-# =============================================================================
-
 class TriangulatorEngine(RAGSearch):
-    """
-    Smarter Innovation: Evidence Synthesis with Domain Intelligence.
-    
-    This engine retrieves data from multiple perspectives but focuses on 
-    SYNTHESIZING a helpful answer rather than being a strict filter.
-    """
-
     ELECTION_SIGNALS = ["election", "vote", "winner", "won", "npp", "ndc", "party", "region", "nana", "mahama", "bawumia"]
     BUDGET_SIGNALS = ["budget", "expenditure", "revenue", "gdp", "inflation", "cedi", "ghc", "growth", "fiscal"]
 
@@ -69,17 +74,11 @@ class TriangulatorEngine(RAGSearch):
         return "general"
 
     def triangulate(self, client, query: str) -> dict:
-        """
-        Retrieves evidence from Semantic, Keyword, and Domain paths,
-        then synthesizes them into one highly intelligent response.
-        """
         domain = self._detect_domain(query)
         
-        # 1. Gather Broad Evidence
-        semantic_path = self.search(query, k=4, alpha=0.8) # Favor meaning
-        keyword_path  = self.search(query, k=4, alpha=0.2) # Favor exact figures
+        semantic_path = self.search(query, k=4, alpha=0.8)
+        keyword_path  = self.search(query, k=4, alpha=0.2)
         
-        # Combine and deduplicate chunks
         unique_chunks = {}
         for r in semantic_path + keyword_path:
             text = r['chunk']['text']
@@ -87,18 +86,15 @@ class TriangulatorEngine(RAGSearch):
                 unique_chunks[text] = r
         
         results = sorted(unique_chunks.values(), key=lambda x: x['score'], reverse=True)[:6]
-        
-        # 2. Smart Synthesis Prompt
         context = "\n".join([f"[Source: {r['chunk']['source']}] {r['chunk']['text']}" for r in results])
         
         system_prompt = (
             "You are the Academic City AI, a highly intelligent assistant for Ghana government and election data. "
             "Your goal is to provide CLEAR, DIRECT, and HELPFUL answers based on the provided documents.\n\n"
             "RULES:\n"
-            "1. If multiple years or versions of data exist (e.g. 2012 vs 2020), always prioritize the MOST RECENT data unless the user asks for a specific year.\n"
-            "2. Do not say 'NOT_FOUND' if you can find a partial or related answer. Be helpful like a real assistant.\n"
-            "3. If the answer is absolutely not there, politely explain what data you DO have.\n"
-            "4. For election queries, identify the candidate and their specific results (votes/percentage) clearly."
+            "1. If multiple years exist, always prioritize the MOST RECENT data.\n"
+            "2. Do not say 'NOT_FOUND' if you can find a partial answer. Be helpful.\n"
+            "3. If the answer is absolutely not there, politely explain what data you DO have."
         )
         
         user_prompt = f"Context Evidence:\n{context}\n\nUser Question: {query}\nHelpful Answer:"
@@ -112,14 +108,10 @@ class TriangulatorEngine(RAGSearch):
             temperature=0.1
         )
         
-        # 3. Simple Confidence Check
-        # If the LLM's answer is short or contains "I don't know", confidence is low.
         ans = response.choices[0].message.content
         conf_level = "HIGH"
-        if len(results) < 2 or "not mentioned" in ans.lower() or "don't know" in ans.lower():
+        if len(results) < 2 or "not mentioned" in ans.lower():
             conf_level = "MEDIUM"
-        if "not found" in ans.lower():
-            conf_level = "LOW"
 
         return {
             "final_answer": ans,

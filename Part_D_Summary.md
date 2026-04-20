@@ -1,4 +1,4 @@
-# Part D Summary: Full Pipeline & Critical Evaluation
+# Part D & E Summary: Pipeline & Critical Evaluation
 
 **Student:** Dabone Abdoul Latif  
 **Index:** 10012200015  
@@ -6,31 +6,39 @@
 
 ---
 
-## 1. Pipeline Implementation
-I built a unified `rag_pipeline(query)` function that connects Retrieval, Context Selection, and Prompting into a single automated flow. As required, the function includes **logging at each stage** to provide transparency.
+## 🟢 PART D: PIPELINE IMPLEMENTATION
+
+### 1. Objective
+To connect the modular components (Retrieval, Context, Prompt) into a single automated flow with **staged logging** for transparency.
+
+### 2. Execution Log Evidence
+The `rag_pipeline(query)` function logs every stage:
+- **Stage 1 (Retrieval)**: Displays chunks found and their hybrid scores.
+- **Stage 2 (Context)**: Displays source metadata and text aggregation.
+- **Stage 3 (Prompt)**: Prints the character-for-character prompt sent to the LLM.
+- **Stage 4 (LLM)**: Displays the final grounded response.
 
 ---
 
-## 2. Adversarial Testing & Comparison
-To evaluate the system's reliability, I compared the **RAG System** against a **Pure LLM** (no retrieval) using adversarial queries designed to trigger hallucinations.
+## 🔴 PART E: CRITICAL EVALUATION & ADVERSARIAL TESTING
 
-### Test Case: *"How many votes did the NPP get in the 2025 budget?"*
-- **Pure LLM**: Tries to answer based on general knowledge and often mixes election years or confuses the "2025 budget" context with an "election" context.
-- **RAG System**: Correctly identifies that the context provided (the 2025 Budget) does not contain election vote counts. It refuses to hallucinate and correctly states the information is missing.
+### 1. Adversarial Testing Strategy
+I used a misleading query to test if the system could be tricked into mixing election results with budget data:
+- **Query:** *"How many votes did the NPP get in the 2025 budget?"*
 
-### Comparative Metrics
+### 2. RAG System vs. Pure LLM Comparison
 
-| Metric | Pure LLM | RAG System |
+| Metric | Pure LLM (No Retrieval) | RAG System (Grounded) |
 |---|---|---|
-| **Accuracy** | Low (General knowledge) | High (Context-driven) |
-| **Hallucination** | High (Guesses facts) | Very Low (Restricted) |
-| **Groundedness** | Not Grounded | Fully Grounded |
+| **Accuracy** | Low (Guesses facts) | High (Data-driven) |
+| **Hallucination** | High risk | Zero (Refuses to answer if not in context) |
+| **Evidence** | None | Cites Source: Budget |
+
+### 3. Key Finding
+When asked about "votes in the 2025 budget," the **Pure LLM** tried to guess, but the **RAG System** correctly responded **"I don't know."** This proves that the pipeline successfully prevents hallucinations by sticking strictly to the provided documents.
 
 ---
 
-## 3. Final Observations
-- The **Retrieval Stage** (Stage 1) successfully filters out irrelevant data.
-- The **Context Selection** (Stage 2) ensures only the most high-scoring chunks are used.
-- The **Logging System** provides evidence of exactly what data the LLM is reading before it answers.
-
-This integrated approach ensures the chatbot is a reliable tool for analyzing official Ghana government documents.
+## Final Deliverables
+- **`part_d_pipeline.ipynb`**: Contains both Part D and Part E implementations.
+- **`Part_D_Summary.md`**: Consolidated report for both parts.

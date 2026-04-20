@@ -1,9 +1,9 @@
 import json
 import faiss
 import numpy as np
-import requests
 import os
 from rank_bm25 import BM25Okapi
+from fastembed import TextEmbedding
 from dotenv import load_dotenv
 
 class RAGSearch:
@@ -15,7 +15,7 @@ class RAGSearch:
             pdf_chunks = json.load(f)
         self.all_chunks = csv_chunks + pdf_chunks
         
-        # 2. Load Index (No model loaded locally = Low Memory!)
+        # 2. Load Index (384 dim)
         self.index = faiss.read_index(index_path)
         
         # 3. Setup BM25
@@ -23,25 +23,16 @@ class RAGSearch:
         tokenized_corpus = [text.lower().split() for text in texts]
         self.bm25 = BM25Okapi(tokenized_corpus)
         
-        # 4. API for Embeddings (Hugging Face Inference API)
-        # Using a public endpoint to keep memory usage near zero
-        self.API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
-        self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN', '')}"}
-
-    def get_embedding(self, text):
-        """Get embeddings via API instead of local model to save RAM."""
-        try:
-            response = requests.post(self.API_URL, headers=self.headers, json={"inputs": text})
-            return np.array(response.json()).astype('float32')
-        except:
-            # Fallback if API fails (just return zeros to prevent crash)
-            return np.zeros((1, 384)).astype('float32')
+        # 4. Ultra-Lightweight Embedding Model
+        # This uses 10x less RAM than sentence-transformers
+        self.model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
     def search(self, query, k=5, alpha=0.5):
-        # Vector search via API
-        query_vec = self.get_embedding(query)
-        if len(query_vec.shape) == 1: query_vec = query_vec.reshape(1, -1)
+        # Get query embedding using FastEmbed
+        query_embeddings = list(self.model.embed([query]))
+        query_vec = np.array(query_embeddings[0]).astype('float32').reshape(1, -1)
         
+        # FAISS search
         distances, indices = self.index.search(query_vec, k * 2)
         
         # BM25 search
@@ -93,7 +84,7 @@ class TriangulatorEngine(RAGSearch):
             "Your goal is to provide CLEAR, DIRECT, and HELPFUL answers based on the provided documents.\n\n"
             "RULES:\n"
             "1. If multiple years exist, always prioritize the MOST RECENT data.\n"
-            "2. Do not say 'NOT_FOUND' if you can find a partial answer. Be helpful.\n"
+            "2. Do not say 'NOT_FOUND' if you can find a partial answer.\n"
             "3. If the answer is absolutely not there, politely explain what data you DO have."
         )
         

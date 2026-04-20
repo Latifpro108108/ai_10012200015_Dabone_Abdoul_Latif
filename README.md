@@ -17,26 +17,40 @@ A complete RAG (Retrieval-Augmented Generation) chatbot designed to answer quest
 - **Interactive UI**: A professional Streamlit dashboard for real-time querying.
 
 ## How to Run
-1. **Environment Setup**:
-   Create a `.env` file and add your Groq API Key:
+
+### 1. Backend (Flask)
+1. Create a `.env` file in the root and add your Groq API Key:
    ```env
    GROQ_API_KEY=your_key_here
    ```
-2. **Install Dependencies**:
+2. Install Python dependencies:
    ```bash
-   pip install streamlit groq sentence-transformers faiss-cpu rank-bm25 python-dotenv pandas pymupdf
+   pip install flask flask-cors groq sentence-transformers faiss-cpu rank-bm25 python-dotenv pandas pymupdf
    ```
-3. **Run the Application**:
+3. Run the server:
    ```bash
-   streamlit run app.py
+   python server.py
+   ```
+
+### 2. Frontend (React)
+1. Navigate to the frontend folder:
+   ```bash
+   cd frontend
+   ```
+2. Install Node dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
    ```
 
 ## Project Structure
-- `part_a_data_prep.ipynb`: Data cleaning and chunking logic.
-- `part_b_retrieval.ipynb`: Indexing and hybrid search implementation.
-- `part_c_prompt_engineering.ipynb`: Prompt template design.
-- `Part_D_and_E_Pipeline_and_Evaluation.ipynb`: Consolidated backend and evaluation.
-- `app.py`: Final Streamlit User Interface.
+- `server.py`: Flask API backend.
+- `search_engine.py`: Core RAG and Triangulation logic.
+- `frontend/`: React (Vite) source code.
+- `Part_G_Innovation.ipynb`: Innovation demonstration notebook.
 
 ---
 © 2026 Dabone Abdoul Latif | Academic City University College

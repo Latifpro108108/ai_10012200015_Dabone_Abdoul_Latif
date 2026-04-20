@@ -1,0 +1,10 @@
+flask
+flask-cors
+groq
+sentence-transformers
+faiss-cpu
+rank-bm25
+python-dotenv
+pandas
+pymupdf
+numpy

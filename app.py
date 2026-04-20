@@ -7,6 +7,7 @@ from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 from groq import Groq
 from dotenv import load_dotenv
+from search_engine import TriangulatorEngine
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -20,8 +21,10 @@ st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     .stChatFloatingInputContainer { background-color: #ffffff; }
-    .st-emotion-cache-1c7n2ka { background-color: #ffffff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .ghana-header { color: #ce1126; font-weight: bold; }
+    .confidence-high   { background:#d4edda; color:#155724; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
+    .confidence-medium { background:#fff3cd; color:#856404; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
+    .confidence-low    { background:#f8d7da; color:#721c24; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -30,57 +33,22 @@ st.markdown("""
 def load_all_assets():
     load_dotenv()
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    
-    # Load chunks
-    with open('chunks/csv_chunks.json', 'r') as f: csv_chunks = json.load(f)
-    with open('chunks/pdf_chunks.json', 'r') as f: pdf_chunks = json.load(f)
-    all_chunks = csv_chunks + pdf_chunks
-    
-    # Load retrieval models
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    index = faiss.read_index('indexes/rag_index.faiss')
-    
-    # Build BM25
-    texts = [c['text'] for c in all_chunks]
-    bm25 = BM25Okapi([t.lower().split() for t in texts])
-    
-    return client, all_chunks, model, index, bm25
+    engine = TriangulatorEngine(index_path='indexes/rag_index.faiss')
+    return client, engine
 
 try:
-    client, all_chunks, model, index, bm25 = load_all_assets()
+    client, engine = load_all_assets()
 except Exception as e:
     st.error(f"Critical Error Loading Project: {e}")
     st.stop()
 
-# --- PIPELINE LOGIC ---
-def run_pipeline(query, k=3):
-    # Stage 1: Retrieval
-    query_vec = model.encode([query]).astype('float32')
-    distances, indices = index.search(query_vec, k * 2)
-    bm25_scores = bm25.get_scores(query.lower().split())
-    max_bm25 = max(bm25_scores) if max(bm25_scores) > 0 else 1
-    
-    combined = []
-    for i, chunk in enumerate(all_chunks):
-        v_score = 0
-        for rank, idx in enumerate(indices[0]):
-            if idx == i: v_score = 1 / (1 + distances[0][rank])
-        score = (0.5 * v_score) + (0.5 * (bm25_scores[i] / max_bm25))
-        if score > 0: combined.append({'chunk': chunk, 'score': score})
-    
-    results = sorted(combined, key=lambda x: x['score'], reverse=True)[:k]
-    
-    # Stage 2 & 3: Context and Prompt
-    context = "".join([f"\n[Source: {r['chunk']['source']}] {r['chunk']['text']}\n" for r in results])
-    prompt = f"Answer based ONLY on context. If not found, say you don't know.\nDocuments: {context}\nQuery: {query}\nAnswer:"
-    
-    # Stage 4: LLM
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-    return results, prompt, response.choices[0].message.content
+# --- CONFIDENCE BADGE HELPER ---
+def confidence_badge(level: str) -> str:
+    icons = {"HIGH": "✅", "MEDIUM": "⚠️", "LOW": "❌"}
+    css   = {"HIGH": "confidence-high", "MEDIUM": "confidence-medium", "LOW": "confidence-low"}
+    icon  = icons.get(level, "❓")
+    cls   = css.get(level, "confidence-medium")
+    return f'<span class="{cls}">{icon} {level} CONFIDENCE</span>'
 
 # --- UI LAYOUT ---
 st.sidebar.image("https://img.icons8.com/color/96/ghana.png", width=60)
@@ -92,13 +60,33 @@ st.sidebar.info(f"""
 """)
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("Project Specs")
+st.sidebar.subheader("System Capabilities")
 st.sidebar.write("✅ Hybrid Search (FAISS + BM25)")
 st.sidebar.write("✅ Llama 3.3 70B (Groq)")
 st.sidebar.write("✅ Anti-Hallucination Prompting")
+st.sidebar.write("🆕 Evidence Triangulation (Part G)")
+st.sidebar.write("🆕 Domain-Aware Confidence Scoring")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Part G: Innovation Mode")
+use_triangulator = st.sidebar.toggle(
+    "🔬 Enable Evidence Triangulation",
+    value=False,
+    help=(
+        "Runs 3 independent retrieval paths and cross-checks answers "
+        "for a confidence score. Slower but more trustworthy."
+    )
+)
 
 st.title("Ghana National Data Chatbot")
 st.markdown("Query the **2025 Budget** and **Election Results** with grounded AI.")
+
+if use_triangulator:
+    st.info(
+        "🔬 **Innovation Mode Active** — Evidence Triangulation Engine is running. "
+        "Each query is answered by 3 independent paths and cross-checked for confidence.",
+        icon="🆕"
+    )
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -107,7 +95,7 @@ if "messages" not in st.session_state:
 # Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(message["content"], unsafe_allow_html=True)
 
 # Chat input
 if query := st.chat_input("Ask about inflation, GDP, or election winners..."):
@@ -115,24 +103,76 @@ if query := st.chat_input("Ask about inflation, GDP, or election winners..."):
     with st.chat_message("user"):
         st.markdown(query)
 
-    with st.spinner("Analyzing documents..."):
-        results, final_prompt, answer = run_pipeline(query)
+    if use_triangulator:
+        # ============================================================
+        # PART G: Evidence Triangulation Mode
+        # ============================================================
+        with st.spinner("🔬 Running 3 independent retrieval paths and arbitrating confidence..."):
+            report = engine.triangulate(client, query)
 
-    with st.chat_message("assistant"):
-        st.markdown(answer)
-        
-        # Display Pipeline Inspector
-        with st.expander("🔍 View RAG Pipeline Inspector"):
-            st.write("### 1. Retrieved Chunks (Hybrid Scoring)")
-            for i, r in enumerate(results):
-                st.write(f"**Chunk {i+1}** | Score: `{r['score']:.4f}` | Source: `{r['chunk']['source']}`")
-                st.caption(f"Text snippet: {r['chunk']['text'][:200]}...")
-            
-            st.divider()
-            st.write("### 2. Final Prompt (Grounded Context)")
-            st.code(final_prompt, language="markdown")
+        conf  = report["confidence"]
+        level = conf["level"]
+        badge = confidence_badge(level)
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.markdown(f"**Answer:** {report['final_answer']}")
+            st.markdown(badge, unsafe_allow_html=True)
+            st.caption(f"🔎 Detected domain: **{report['detected_domain'].upper()}** | {conf['reason']}")
+
+            with st.expander("🔬 View Full Triangulation Report"):
+                tabs = st.tabs(["Path 1: Semantic", "Path 2: Keyword", "Path 3: Domain-Filtered"])
+
+                path_keys = ["semantic", "keyword", "domain_filtered"]
+                for tab, key in zip(tabs, path_keys):
+                    with tab:
+                        path_data = report["paths"][key]
+                        st.markdown(f"**Answer:** {path_data['answer']}")
+                        st.markdown("**Retrieved Chunks:**")
+                        for i, r in enumerate(path_data["chunks"]):
+                            st.write(f"Chunk {i+1} | Score: `{r['score']:.4f}` | Source: `{r['chunk']['source']}`")
+                            st.caption(r['chunk']['text'][:200] + "...")
+
+                st.divider()
+                st.markdown(f"**Arbiter Verdict:** {badge}", unsafe_allow_html=True)
+                st.markdown(f"**Reason:** {conf['reason']}")
+
+        answer_display = f"{report['final_answer']}\n\n{badge}"
+        st.session_state.messages.append({"role": "assistant", "content": answer_display})
+
+    else:
+        # ============================================================
+        # Standard RAG Pipeline (original behaviour)
+        # ============================================================
+        with st.spinner("Analyzing documents..."):
+            results = engine.search(query, k=3)
+            context = "\n".join(
+                f"[Source: {r['chunk']['source']}] {r['chunk']['text']}"
+                for r in results
+            )
+            prompt = (
+                "Answer based ONLY on context. "
+                "If not found, say you don't know.\n"
+                f"Documents: {context}\nQuery: {query}\nAnswer:"
+            )
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            answer = resp.choices[0].message.content
+
+        with st.chat_message("assistant"):
+            st.markdown(answer)
+            with st.expander("🔍 View RAG Pipeline Inspector"):
+                st.write("### 1. Retrieved Chunks (Hybrid Scoring)")
+                for i, r in enumerate(results):
+                    st.write(f"**Chunk {i+1}** | Score: `{r['score']:.4f}` | Source: `{r['chunk']['source']}`")
+                    st.caption(f"Text snippet: {r['chunk']['text'][:200]}...")
+                st.divider()
+                st.write("### 2. Final Prompt (Grounded Context)")
+                st.code(prompt, language="markdown")
+
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 # Footnote
 st.markdown("---")

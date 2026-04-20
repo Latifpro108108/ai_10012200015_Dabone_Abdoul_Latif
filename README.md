@@ -8,58 +8,25 @@
 ---
 
 ## Project Overview
-
-A RAG (Retrieval-Augmented Generation) chatbot built manually for Academic City University.  
-The chatbot answers questions using two real datasets:
-
-- Ghana Presidential Election Results (CSV)
-- Ghana 2025 Budget Statement (PDF)
-
----
+A RAG (Retrieval-Augmented Generation) chatbot using Ghana election and budget data.
 
 ## Branches
-
 | Branch | Content | Status |
 |---|---|---|
-| `main` | Project overview and shared files | ✅ Active |
-| `part-a` | Data cleaning and chunking | ✅ Complete |
-| `part-b` | Embeddings, vector store, and hybrid retrieval | ✅ Complete |
-| `part-c` | Prompt engineering and LLM experiments | ✅ Complete |
-| `part-d` | Streamlit app and deployment | 🔜 Coming soon |
-
----
+| `main` | Overview | ✅ |
+| `part-a` | Data Prep | ✅ |
+| `part-b` | Retrieval | ✅ |
+| `part-c` | Prompts | ✅ |
+| `part-d` | App | 🔜 |
 
 ## Progress
-
-### ✅ Part A — Data Preparation
-- Cleaned and loaded Ghana Election CSV (615 chunks) and 2025 Budget PDF (376 chunks)
-- Applied sliding-window chunking strategy (300 words, 50-word overlap) for the PDF
-- Used 1-row-per-chunk strategy for the CSV
-- Saved all chunks to `chunks/csv_chunks.json` and `chunks/pdf_chunks.json`
-
-### ✅ Part B — Retrieval System
-- Generated 384-dimension embeddings using `all-MiniLM-L6-v2` (sentence-transformers)
-- Built a FAISS vector index (`indexes/rag_index.faiss`) over all 991 combined chunks
-- Implemented **Hybrid Search** combining FAISS vector search (semantic) + BM25 (keyword)
-- Demonstrated retrieval failure fix using the hybrid strategy
-- **Retrieval Accuracy:** Top-3 hit rate of 100% on test queries with scores above 0.85
-
-### ✅ Part C — Prompt Engineering
-- Designed 3 prompt templates: Strict (anti-hallucination), Loose (friendly), Academic (with citations)
-- Implemented context window management — token budget of 1,000 tokens using Rank + Truncate strategy
-- Ran experiments with 2 queries × 3 prompts to compare AI outputs
-- Connected to **Groq API** (llama-3.3-70b-versatile) for LLM responses
-
-### 🔜 Part D — Streamlit App
-- Coming soon
-
----
+- **Part A**: Cleaned data and created 991 chunks (CSV/PDF).
+- **Part B**: Built FAISS index and hybrid search.
+- **Part C**: Designed prompt templates and context management.
+- **Part D**: (Pending) Streamlit integration.
 
 ## Tech Stack
-
-- Python, Pandas, PyMuPDF
-- sentence-transformers (`all-MiniLM-L6-v2`)
-- FAISS (Facebook AI Similarity Search)
-- BM25 (`rank-bm25`) for hybrid keyword search
-- Groq API (llama-3.3-70b)
+- Python (Pandas, PyMuPDF, FAISS)
+- Sentence-Transformers
+- Groq API (Llama-3)
 - Streamlit

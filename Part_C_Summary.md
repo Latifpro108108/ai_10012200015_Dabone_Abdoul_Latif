@@ -4,19 +4,22 @@
 **Index:** 10012200015
 
 ### 1. Prompt Design
-I created two main prompt versions to test how instructions affect the output:
-- **v1**: Focuses on preventing hallucinations by instructing the model to say "I don't know" if the context is missing.
-- **v2**: Focuses on direct and concise answers based strictly on the provided documents.
+I designed two prompt versions to test how strict instructions affect the AI's reliability:
+- **v1**: Includes a strict "I do not know" clause to prevent hallucinations.
+- **v2**: A direct instruction to be concise and stick only to the provided documents.
 
 ### 2. Context Management
-To prevent exceeding the model's token limit, I implemented a truncation strategy:
-- Limited retrieval to the top 3 most relevant chunks.
-- Set a hard character limit (4000 characters) for the injected context.
-- This ensures the model always has enough space to generate a response without cutting off.
+To ensure the system works within the LLM's token limits, I used the following strategy:
+- **Integration**: The system loads the `rag_index.faiss` and the embedding model directly from Part B.
+- **Ranking**: It uses the Hybrid Search logic to pick the top 3 most relevant chunks.
+- **Truncation**: The combined text is limited to 4000 characters to prevent prompt overflow.
 
-### 3. Results
-Running experiments with the same query across both prompts showed:
-- **v1** was more cautious and better at staying within the provided text.
-- **v2** provided shorter, more readable responses suitable for a chatbot.
+### 3. Experimental Results
+I tested the system with the query: *"What is the inflation target for 2025?"*
 
-These prompts will be integrated into the final application in Part D.
+**Observations:**
+- The **Retrieval System (Part B)** correctly identified chunks discussing 2025 economic outlooks and 2024 inflation targets.
+- The **LLM (Part C)** correctly identified that while 2024 targets and 2025 *projections* exist in the text, the specific *target* for 2025 was not explicitly stated.
+- Both prompts successfully prevented the AI from making up a number, with **v1** giving a very clear "I do not know" response as instructed.
+
+This proves that the connection between the Retrieval (Part B) and the Prompt (Part C) is working perfectly to provide honest, data-driven answers.

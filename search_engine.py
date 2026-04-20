@@ -1,46 +1,53 @@
 import json
-import os
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 from dotenv import load_dotenv
 
 class RAGSearch:
-    def __init__(self, index_path=None):
-        # 1. Load Chunks (Very efficient)
-        print("Loading chunks into memory...")
+    def __init__(self, index_path='indexes/rag_index.faiss'):
+        # 1. Load Chunks
         with open('chunks/csv_chunks.json', 'r') as f:
             csv_chunks = json.load(f)
         with open('chunks/pdf_chunks.json', 'r') as f:
             pdf_chunks = json.load(f)
         self.all_chunks = csv_chunks + pdf_chunks
         
-        # 2. Setup BM25 (Zero-RAM Keyword Engine)
-        print("Initializing Keyword Search Engine...")
+        # 2. Load Model & Index
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.index = faiss.read_index(index_path)
+        
+        # 3. Setup BM25
         texts = [c['text'] for c in self.all_chunks]
         tokenized_corpus = [text.lower().split() for text in texts]
         self.bm25 = BM25Okapi(tokenized_corpus)
 
-    def search(self, query, k=8):
-        """Ultra-lightweight search that fits on Free Tiers."""
-        # Get scores for the query
-        scores = self.bm25.get_scores(query.lower().split())
+    def search(self, query, k=5, alpha=0.5):
+        # Semantic search
+        query_vec = self.model.encode([query]).astype('float32')
+        distances, indices = self.index.search(query_vec, k * 2)
         
-        # Get top K results
-        top_n = np.argsort(scores)[::-1][:k]
+        # BM25 search
+        bm25_scores = self.bm25.get_scores(query.lower().split())
+        max_bm25 = max(bm25_scores) if max(bm25_scores) > 0 else 1
         
-        results = []
-        for i in top_n:
-            if scores[i] > 0:
-                results.append({
-                    'chunk': self.all_chunks[i],
-                    'score': float(scores[i])
-                })
-        return results
+        combined = []
+        for i, chunk in enumerate(self.all_chunks):
+            v_score = 0
+            for rank, idx in enumerate(indices[0]):
+                if idx == i:
+                    v_score = 1 / (1 + distances[0][rank])
+                    break
+            
+            score = (alpha * v_score) + ((1 - alpha) * (bm25_scores[i] / max_bm25))
+            if score > 0:
+                combined.append({'chunk': chunk, 'score': score})
+                
+        return sorted(combined, key=lambda x: x['score'], reverse=True)[:k]
+
 
 class TriangulatorEngine(RAGSearch):
-    """
-    Smarter Cloud-Native Engine.
-    Uses BM25 for rapid retrieval and Groq for intelligent synthesis.
-    """
     ELECTION_SIGNALS = ["election", "vote", "winner", "won", "npp", "ndc", "party", "region", "nana", "mahama", "bawumia"]
     BUDGET_SIGNALS = ["budget", "expenditure", "revenue", "gdp", "inflation", "cedi", "ghc", "growth", "fiscal"]
 
@@ -53,17 +60,26 @@ class TriangulatorEngine(RAGSearch):
     def triangulate(self, client, query: str) -> dict:
         domain = self._detect_domain(query)
         
-        # Retrieve evidence (Fast & Light)
-        results = self.search(query, k=8)
+        # Evidence pooling from both paths
+        semantic_path = self.search(query, k=4, alpha=0.8)
+        keyword_path  = self.search(query, k=4, alpha=0.2)
+        
+        unique_chunks = {}
+        for r in semantic_path + keyword_path:
+            text = r['chunk']['text']
+            if text not in unique_chunks or r['score'] > unique_chunks[text]['score']:
+                unique_chunks[text] = r
+        
+        results = sorted(unique_chunks.values(), key=lambda x: x['score'], reverse=True)[:6]
         context = "\n".join([f"[Source: {r['chunk']['source']}] {r['chunk']['text']}" for r in results])
         
         system_prompt = (
             "You are the Academic City AI, a highly intelligent assistant for Ghana government and election data. "
             "Your goal is to provide CLEAR, DIRECT, and HELPFUL answers based on the provided documents.\n\n"
             "RULES:\n"
-            "1. ALWAYS prioritize the most recent data (e.g., 2020) over older data.\n"
-            "2. If the user asks for a figure, be precise.\n"
-            "3. If information is missing, politely say so based on your context."
+            "1. If multiple years exist, always prioritize the MOST RECENT data (e.g., 2020).\n"
+            "2. Do not say 'NOT_FOUND' if you can find a partial answer. Be as helpful as possible.\n"
+            "3. If information is missing, explain what you found instead of giving up."
         )
         
         user_prompt = f"Context Evidence:\n{context}\n\nUser Question: {query}\nHelpful Answer:"
@@ -78,13 +94,13 @@ class TriangulatorEngine(RAGSearch):
         )
         
         ans = response.choices[0].message.content
-        conf_level = "HIGH" if len(results) > 3 else "MEDIUM"
+        conf_level = "HIGH"
+        if len(results) < 2 or "not mentioned" in ans.lower():
+            conf_level = "MEDIUM"
 
         return {
             "final_answer": ans,
             "detected_domain": domain,
-            "confidence": {"level": conf_level, "reason": f"Analyzed {len(results)} relevant data points."},
+            "confidence": {"level": conf_level, "reason": f"Synthesized from {len(results)} relevant sources."},
             "sources": results
         }
-
-import numpy as np # Needed for search

@@ -24,7 +24,7 @@ The chatbot answers questions using two real datasets:
 | `main` | Project overview and shared files | ✅ Active |
 | `part-a` | Data cleaning and chunking | ✅ Complete |
 | `part-b` | Embeddings, vector store, and hybrid retrieval | ✅ Complete |
-| `part-c` | Retrieval and prompt building | 🔜 Coming soon |
+| `part-c` | Prompt engineering and LLM experiments | ✅ Complete |
 | `part-d` | Streamlit app and deployment | 🔜 Coming soon |
 
 ---
@@ -44,8 +44,11 @@ The chatbot answers questions using two real datasets:
 - Demonstrated retrieval failure fix using the hybrid strategy
 - **Retrieval Accuracy:** Top-3 hit rate of 100% on test queries with scores above 0.85
 
-### 🔜 Part C — Prompt Building
-- Coming soon
+### ✅ Part C — Prompt Engineering
+- Designed 3 prompt templates: Strict (anti-hallucination), Loose (friendly), Academic (with citations)
+- Implemented context window management — token budget of 1,000 tokens using Rank + Truncate strategy
+- Ran experiments with 2 queries × 3 prompts to compare AI outputs
+- Connected to **Groq API** (llama-3.3-70b-versatile) for LLM responses
 
 ### 🔜 Part D — Streamlit App
 - Coming soon

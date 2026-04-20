@@ -5,14 +5,23 @@ from groq import Groq
 import os
 from dotenv import load_dotenv
 
-# Initialize Flask with static folder pointing to React build
+# Initialize Flask with static folder
 app = Flask(__name__, static_folder='frontend/dist', static_url_path='/')
-CORS(app)  # Enable CORS
+CORS(app)
 
-# Load environment and RAG engine
+# Load environment
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-engine = TriangulatorEngine(index_path='indexes/rag_index.faiss')
+
+# Lazy load the engine to ensure port opens quickly
+engine = None
+
+def get_engine():
+    global engine
+    if engine is None:
+        print("🚀 Initializing AI Synthesis Engine...")
+        engine = TriangulatorEngine(index_path='indexes/rag_index.faiss')
+    return engine
 
 # --- API ENDPOINT ---
 @app.route('/api/query', methods=['POST'])
@@ -24,8 +33,7 @@ def query_rag():
         return jsonify({"error": "No query provided"}), 400
         
     try:
-        # Run the Synthesis Engine
-        report = engine.triangulate(client, user_query)
+        report = get_engine().triangulate(client, user_query)
         return jsonify({
             "answer": report["final_answer"],
             "confidence": report["confidence"],
@@ -36,6 +44,7 @@ def query_rag():
             ]
         })
     except Exception as e:
+        print(f"Query Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # --- SERVE REACT FRONTEND ---
@@ -48,6 +57,7 @@ def not_found(e):
     return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
-    # Use PORT environment variable for Render
+    # Force host to 0.0.0.0 and get port from environment
     port = int(os.environ.get("PORT", 5000))
+    print(f"🌍 Server starting on port {port}...")
     app.run(host='0.0.0.0', port=port)

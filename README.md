@@ -8,7 +8,7 @@
 ---
 
 ## Project Overview
-A RAG (Retrieval-Augmented Generation) chatbot using Ghana election and budget data.
+A complete RAG (Retrieval-Augmented Generation) chatbot using Ghana election results and the 2025 budget statement.
 
 ## Branches
 | Branch | Content | Status |
@@ -17,16 +17,16 @@ A RAG (Retrieval-Augmented Generation) chatbot using Ghana election and budget d
 | `part-a` | Data Prep | ✅ |
 | `part-b` | Retrieval | ✅ |
 | `part-c` | Prompts | ✅ |
-| `part-d` | App | 🔜 |
+| `part-d` | Backend Pipeline | ✅ |
 
 ## Progress
 - **Part A**: Cleaned data and created 991 chunks (CSV/PDF).
-- **Part B**: Built FAISS index and hybrid search.
+- **Part B**: Built FAISS index and hybrid search system.
 - **Part C**: Designed prompt templates and context management.
-- **Part D**: (Pending) Streamlit integration.
+- **Part D**: Integrated full backend pipeline with staged logging.
 
 ## Tech Stack
 - Python (Pandas, PyMuPDF, FAISS)
-- Sentence-Transformers
-- Groq API (Llama-3)
-- Streamlit
+- Sentence-Transformers (`all-MiniLM-L6-v2`)
+- Groq API (`llama-3.3-70b-versatile`)
+- Streamlit (Final Deliverable)

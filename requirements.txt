@@ -1,8 +1,6 @@
-fastembed
 flask
 flask-cors
 groq
-faiss-cpu
 rank-bm25
 python-dotenv
 pandas

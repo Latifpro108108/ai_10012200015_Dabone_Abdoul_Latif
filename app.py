@@ -11,169 +11,94 @@ from search_engine import TriangulatorEngine
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="Ghana RAG AI Assistant",
+    page_title="Ghana Intel AI",
     page_icon="🇬🇭",
     layout="wide"
 )
 
-# --- CUSTOM CSS ---
+# --- PREMIUM CSS ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stChatFloatingInputContainer { background-color: #ffffff; }
-    .ghana-header { color: #ce1126; font-weight: bold; }
-    .confidence-high   { background:#d4edda; color:#155724; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
-    .confidence-medium { background:#fff3cd; color:#856404; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
-    .confidence-low    { background:#f8d7da; color:#721c24; border-radius:8px; padding:8px 14px; font-weight:bold; display:inline-block; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+    * { font-family: 'Outfit', sans-serif; }
+    .stApp { background-color: #0a0a0a; color: #ffffff; }
+    [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #CE1126; }
+    
+    .answer-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 30px;
+        border-left: 5px solid #FCD116;
+        margin-top: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    .ghana-text {
+        background: linear-gradient(to right, #CE1126, #FCD116, #006B3F);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 2.8rem;
+    }
+    
+    .badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        background: #006B3F;
+        color: white;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- RESOURCE LOADING ---
+# --- ASSETS ---
 @st.cache_resource
-def load_all_assets():
+def load_assets():
     load_dotenv()
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     engine = TriangulatorEngine(index_path='indexes/rag_index.faiss')
     return client, engine
 
-try:
-    client, engine = load_all_assets()
-except Exception as e:
-    st.error(f"Critical Error Loading Project: {e}")
-    st.stop()
+client, engine = load_assets()
 
-# --- CONFIDENCE BADGE HELPER ---
-def confidence_badge(level: str) -> str:
-    icons = {"HIGH": "✅", "MEDIUM": "⚠️", "LOW": "❌"}
-    css   = {"HIGH": "confidence-high", "MEDIUM": "confidence-medium", "LOW": "confidence-low"}
-    icon  = icons.get(level, "❓")
-    cls   = css.get(level, "confidence-medium")
-    return f'<span class="{cls}">{icon} {level} CONFIDENCE</span>'
+# --- SIDEBAR ---
+with st.sidebar:
+    if os.path.exists("logo.png"):
+        st.image("logo.png", use_container_width=True)
+    else:
+        st.image("https://img.icons8.com/color/144/ghana.png", width=70)
+    
+    st.markdown("<h2 style='color:white;'>Ghana Intelligence</h2>", unsafe_allow_html=True)
+    st.info(f"**Dabone Abdoul Latif**\n\nIndex: `10012200015`\n\nCS4241 - Intro to AI")
+    st.divider()
+    st.caption("v3.0 | Smart RAG Enabled")
 
-# --- UI LAYOUT ---
-st.sidebar.image("https://img.icons8.com/color/96/ghana.png", width=60)
-st.sidebar.title("🇬🇭 RAG Project")
-st.sidebar.info(f"""
-**Student:** Dabone Abdoul Latif  
-**Index:** 10012200015  
-**Course:** CS4241 - Intro to AI
-""")
+# --- MAIN ---
+st.markdown("<div class='ghana-text'>Ghana Data Intel</div>", unsafe_allow_html=True)
+st.markdown("<p style='color:#888;'>Smart AI Assistant for the 2025 Budget & 2020 Elections.</p>", unsafe_allow_html=True)
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("System Capabilities")
-st.sidebar.write("✅ Hybrid Search (FAISS + BM25)")
-st.sidebar.write("✅ Llama 3.3 70B (Groq)")
-st.sidebar.write("✅ Anti-Hallucination Prompting")
-st.sidebar.write("🆕 Evidence Triangulation (Part G)")
-st.sidebar.write("🆕 Domain-Aware Confidence Scoring")
+query = st.chat_input("Ask a question...")
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("Part G: Innovation Mode")
-use_triangulator = st.sidebar.toggle(
-    "🔬 Enable Evidence Triangulation",
-    value=False,
-    help=(
-        "Runs 3 independent retrieval paths and cross-checks answers "
-        "for a confidence score. Slower but more trustworthy."
-    )
-)
-
-st.title("Ghana National Data Chatbot")
-st.markdown("Query the **2025 Budget** and **Election Results** with grounded AI.")
-
-if use_triangulator:
-    st.info(
-        "🔬 **Innovation Mode Active** — Evidence Triangulation Engine is running. "
-        "Each query is answered by 3 independent paths and cross-checked for confidence.",
-        icon="🆕"
-    )
-
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"], unsafe_allow_html=True)
-
-# Chat input
-if query := st.chat_input("Ask about inflation, GDP, or election winners..."):
-    st.session_state.messages.append({"role": "user", "content": query})
+if query:
     with st.chat_message("user"):
         st.markdown(query)
 
-    if use_triangulator:
-        # ============================================================
-        # PART G: Evidence Triangulation Mode
-        # ============================================================
-        with st.spinner("🔬 Running 3 independent retrieval paths and arbitrating confidence..."):
-            report = engine.triangulate(client, query)
-
-        conf  = report["confidence"]
-        level = conf["level"]
-        badge = confidence_badge(level)
-
-        with st.chat_message("assistant"):
-            st.markdown(f"**Answer:** {report['final_answer']}")
-            st.markdown(badge, unsafe_allow_html=True)
-            st.caption(f"🔎 Detected domain: **{report['detected_domain'].upper()}** | {conf['reason']}")
-
-            with st.expander("🔬 View Full Triangulation Report"):
-                tabs = st.tabs(["Path 1: Semantic", "Path 2: Keyword", "Path 3: Domain-Filtered"])
-
-                path_keys = ["semantic", "keyword", "domain_filtered"]
-                for tab, key in zip(tabs, path_keys):
-                    with tab:
-                        path_data = report["paths"][key]
-                        st.markdown(f"**Answer:** {path_data['answer']}")
-                        st.markdown("**Retrieved Chunks:**")
-                        for i, r in enumerate(path_data["chunks"]):
-                            st.write(f"Chunk {i+1} | Score: `{r['score']:.4f}` | Source: `{r['chunk']['source']}`")
-                            st.caption(r['chunk']['text'][:200] + "...")
-
-                st.divider()
-                st.markdown(f"**Arbiter Verdict:** {badge}", unsafe_allow_html=True)
-                st.markdown(f"**Reason:** {conf['reason']}")
-
-        answer_display = f"{report['final_answer']}\n\n{badge}"
-        st.session_state.messages.append({"role": "assistant", "content": answer_display})
-
-    else:
-        # ============================================================
-        # Standard RAG Pipeline (original behaviour)
-        # ============================================================
+    with st.chat_message("assistant"):
         with st.spinner("Analyzing documents..."):
-            results = engine.search(query, k=3)
-            context = "\n".join(
-                f"[Source: {r['chunk']['source']}] {r['chunk']['text']}"
-                for r in results
-            )
-            prompt = (
-                "Answer based ONLY on context. "
-                "If not found, say you don't know.\n"
-                f"Documents: {context}\nQuery: {query}\nAnswer:"
-            )
-            resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0
-            )
-            answer = resp.choices[0].message.content
-
-        with st.chat_message("assistant"):
-            st.markdown(answer)
-            with st.expander("🔍 View RAG Pipeline Inspector"):
-                st.write("### 1. Retrieved Chunks (Hybrid Scoring)")
-                for i, r in enumerate(results):
-                    st.write(f"**Chunk {i+1}** | Score: `{r['score']:.4f}` | Source: `{r['chunk']['source']}`")
-                    st.caption(f"Text snippet: {r['chunk']['text'][:200]}...")
+            report = engine.triangulate(client, query)
+            
+        # Display the Main Smart Answer
+        st.markdown(f"""
+            <div class="answer-card">
+                <div style="margin-bottom:10px;"><span class="badge">SMART ANSWER</span></div>
+                <p style="font-size:1.15rem; line-height:1.6;">{report['final_answer']}</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Evidence Drop-down
+        with st.expander("📂 View Source Evidence (Chunks)"):
+            for i, r in enumerate(report['sources']):
+                st.markdown(f"**Source {i+1}** | Score: `{r['score']:.4f}` | {r['chunk']['source']}")
+                st.caption(r['chunk']['text'])
                 st.divider()
-                st.write("### 2. Final Prompt (Grounded Context)")
-                st.code(prompt, language="markdown")
-
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
-# Footnote
-st.markdown("---")
-st.caption("Developed for Academic City University College | CS4241 Introduction to Artificial Intelligence")

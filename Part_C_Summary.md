@@ -15,11 +15,12 @@ To ensure the system works within the LLM's token limits, I used the following s
 - **Truncation**: The combined text is limited to 4000 characters to prevent prompt overflow.
 
 ### 3. Experimental Results
-I tested the system with the query: *"What is the inflation target for 2025?"*
+I tested the system with the query: *"What was the NDC vote percentage in the Volta region in 2020?"*
 
 **Observations:**
-- The **Retrieval System (Part B)** correctly identified chunks discussing 2025 economic outlooks and 2024 inflation targets.
-- The **LLM (Part C)** correctly identified that while 2024 targets and 2025 *projections* exist in the text, the specific *target* for 2025 was not explicitly stated.
-- Both prompts successfully prevented the AI from making up a number, with **v1** giving a very clear "I do not know" response as instructed.
+- **Prompt v1 (Strict/Structured)**: Produced a full, explanatory sentence: *"The NDC vote percentage in the Volta region in 2020 was 84.83%."* This is better for a conversational experience.
+- **Prompt v2 (Concise)**: Produced the ultra-short answer: *"84.83%"*. This is better for data extraction or minimal interfaces.
+- **Accuracy**: Both prompts correctly identified the data from the retrieved chunks (84.83%) and avoided any hallucination or outside knowledge.
 
-This proves that the connection between the Retrieval (Part B) and the Prompt (Part C) is working perfectly to provide honest, data-driven answers.
+**Evidence of Improvement:**
+By iterating from v1 to v2, I demonstrated that I can control the **verbosity** and **precision** of the output simply by adjusting the instruction block, without needing to change the underlying retrieval logic.

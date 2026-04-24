@@ -54,7 +54,34 @@ We verified the system by running test queries to ensure the most relevant data 
 
 ---
 
+---
+
+## Step 6 – Critical Task: Failure Case & Fix
+
+We identified and **verified** a real failure case where pure vector search returns wrong results, and demonstrated the fix.
+
+### The Failure
+- **Query:** `"What were the NDC votes in Savannah in 2020?"`
+- **Root Cause:** The `all-MiniLM-L6-v2` embedding model encodes short political acronyms `NDC` (National Democratic Congress) and `NDP` (National Democratic Party) into nearly **identical vector representations**, because they are short, rare tokens with no rich contextual signal.
+- **Result:** Pure vector search returns **NDP (Nana Konadu Agyeman Rawlings)** results — a completely **different party** — instead of the correct NDC results.
+
+### The Fix: Hybrid Search
+By combining **BM25 keyword matching** with vector search:
+- **BM25** performs an exact string match for the token `NDC`, cleanly distinguishing it from `NDP`.
+- **Vector Search** still contributes semantic context for words like *votes*, *Savannah*, and *2020*.
+
+| | Pure Vector Search | Hybrid Search (Fix) |
+|---|---|---|
+| NDC vs NDP | ❌ Treated as nearly identical | ✅ Exact keyword match via BM25 |
+| Top Result | ❌ NDP (Wrong party) | ✅ NDC/Mahama — 144,244 votes in Savannah |
+
+### Conclusion
+This demonstrates why a hybrid retrieval system is more robust than pure semantic search, especially in domains with domain-specific acronyms and terminology.
+
+---
+
 ## Output
 
 - `indexes/rag_index.faiss` — The searchable vector database.
 - A robust `hybrid_search()` function ready for the final application.
+- Verified failure/fix demonstration in the retrieval notebook (Cells 3–5).

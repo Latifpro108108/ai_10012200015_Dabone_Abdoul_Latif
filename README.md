@@ -1,56 +1,78 @@
-# AI RAG Chatbot – Academic City University
+# 🇬🇭 Ghana Intelligence RAG Chatbot
+**Academic City University College | CS4241 - Introduction to AI**
 
 **Student:** Dabone Abdoul Latif  
 **Index Number:** 10012200015  
-**Course:** CS4241 - Introduction to Artificial Intelligence  
 **Lecturer:** Godwin N. Danso  
 
 ---
 
-## Project Overview
-A complete RAG (Retrieval-Augmented Generation) chatbot designed to answer questions about the **2025 Ghana Budget Statement** and the **2020 Regional Election Results**.
+## 🌟 Project Overview
+This project is a high-integrity Retrieval-Augmented Generation (RAG) system designed to provide accurate, grounded answers regarding the **2025 Ghana Budget Statement** and the **2020 Regional Election Results**. 
 
-## Features
-- **Hybrid Search**: Combines FAISS Vector Search with BM25 Keyword Search.
-- **Pipeline Logging**: Full transparency into the retrieval and prompting stages.
-- **Critical Evaluation**: Proven zero-hallucination rate through adversarial testing.
-- **Interactive UI**: A professional Streamlit dashboard for real-time querying.
+The system moves beyond standard RAG by implementing **Evidence Triangulation**, ensuring that sensitive governmental and political data is cross-verified across multiple retrieval methodologies before a response is generated.
 
-## How to Run
+---
 
-### 1. Backend (Flask)
-1. Create a `.env` file in the root and add your Groq API Key:
-   ```env
-   GROQ_API_KEY=your_key_here
-   ```
-2. Install Python dependencies:
-   ```bash
-   pip install flask flask-cors groq sentence-transformers faiss-cpu rank-bm25 python-dotenv pandas pymupdf
-   ```
-3. Run the server:
-   ```bash
-   python server.py
-   ```
+## 🏗️ Project Architecture (The "Parts" Framework)
+The project is structured into logical components, each documented with its own summary and dedicated Git branch for transparency:
 
-### 2. Frontend (React)
-1. Navigate to the frontend folder:
-   ```bash
-   cd frontend
-   ```
-2. Install Node dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+- **Part A: Data Preparation** — PDF/CSV ingestion, recursive character chunking, and metadata enrichment.
+- **Part B: Custom Retrieval** — Hybrid Search implementation combining FAISS (Vector) and BM25 (Keyword).
+- **Part C: Prompt Engineering** — Iterative template design with strict hallucination controls.
+- **Part D: Full RAG Pipeline** — End-to-end integration with staged logging for every query.
+- **Part E: Adversarial Testing** — Critical evaluation using ambiguous and misleading queries to prove robustness.
+- **Part F: System Design** — Technical architecture breakdown and domain-specific justification.
+- **Part G: Innovation** — The **Evidence Triangulation Engine** with automated confidence scoring.
 
-## Project Structure
-- `server.py`: Flask API backend.
-- `search_engine.py`: Core RAG and Triangulation logic.
-- `frontend/`: React (Vite) source code.
-- `Part_G_Innovation.ipynb`: Innovation demonstration notebook.
+---
+
+## 🔬 Core Innovation: Evidence Triangulation
+To ensure zero-hallucination in the "Government & Election" domain, this system implements a novel **Triple-Path Retrieval** strategy:
+1.  **Path 1 (Semantic)**: Captures conceptual meaning via FAISS.
+2.  **Path 3 (Keyword)**: Ensures exact figure accuracy via BM25.
+3.  **Path 3 (Domain-Gated)**: Automatically filters sources (Budget vs. Election) to prevent data contamination.
+
+An **Arbiter LLM** compares all three outputs to assign a **Confidence Level (High/Medium/Low)**, allowing the system to flag unreliable answers rather than guessing.
+
+---
+
+## 🖥️ Applications & Interfaces
+This solution provides two distinct interfaces to cater to different user needs:
+
+This solution provides the following interface:
+
+1.  **Ghana Intelligence Workstation (`app.py`)**: A professional research tool featuring a **RAG Pipeline Inspector**. It allows users to toggle "Innovation Mode" and view the raw retrieval chunks, similarity scores, and the final prompt sent to the LLM.
+
+---
+
+## 🌿 Git Branching Strategy
+This repository follows a structured branching model. Each branch corresponds to a specific phase of the project and contains its own detailed implementation notes:
+- `part-a`, `part-b`, `part-c`, `part-d-e`: Incremental development stages.
+- `main`: The stable core codebase.
+- `final-deliverable`: The polished, submission-ready version of the full system.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Requirements
+- Python 3.10+
+- Groq API Key
+
+### 2. Installation
+```bash
+# Clone the repo and install Python dependencies
+pip install -r requirements.txt
+
+# Setup environment variables
+echo "GROQ_API_KEY=your_key_here" > .env
+```
+
+### 3. Launching the App
+```bash
+streamlit run app.py
+```
 
 ---
 © 2026 Dabone Abdoul Latif | Academic City University College

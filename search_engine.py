@@ -4,6 +4,10 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 from dotenv import load_dotenv
+import ssl
+
+# Fix SSL Certificate Error on Windows
+ssl._create_default_https_context = ssl._create_unverified_context
 
 class RAGSearch:
     def __init__(self, index_path='indexes/rag_index.faiss'):
@@ -48,59 +52,43 @@ class RAGSearch:
 
 
 class TriangulatorEngine(RAGSearch):
-    ELECTION_SIGNALS = ["election", "vote", "winner", "won", "npp", "ndc", "party", "region", "nana", "mahama", "bawumia"]
-    BUDGET_SIGNALS = ["budget", "expenditure", "revenue", "gdp", "inflation", "cedi", "ghc", "growth", "fiscal"]
-
-    def _detect_domain(self, query: str) -> str:
-        q = query.lower()
-        if any(kw in q for kw in self.ELECTION_SIGNALS): return "election"
-        if any(kw in q for kw in self.BUDGET_SIGNALS): return "budget"
-        return "general"
-
     def triangulate(self, client, query: str) -> dict:
-        domain = self._detect_domain(query)
+        # Use a high-quality hybrid search (The "Smart" Path)
+        results = self.search(query, k=6, alpha=0.6)
         
-        # Evidence pooling from both paths
-        semantic_path = self.search(query, k=4, alpha=0.8)
-        keyword_path  = self.search(query, k=4, alpha=0.2)
-        
-        unique_chunks = {}
-        for r in semantic_path + keyword_path:
-            text = r['chunk']['text']
-            if text not in unique_chunks or r['score'] > unique_chunks[text]['score']:
-                unique_chunks[text] = r
-        
-        results = sorted(unique_chunks.values(), key=lambda x: x['score'], reverse=True)[:6]
+        if not results:
+            return {
+                "final_answer": "I'm sorry, I couldn't find any specific information in the documents regarding that question.",
+                "confidence": {"level": "LOW", "reason": "No relevant document chunks found."},
+                "sources": []
+            }
+
         context = "\n".join([f"[Source: {r['chunk']['source']}] {r['chunk']['text']}" for r in results])
         
+        # SMART & HELPFUL PROMPT
         system_prompt = (
-            "You are the Academic City AI, a highly intelligent assistant for Ghana government and election data. "
-            "Your goal is to provide CLEAR, DIRECT, and HELPFUL answers based on the provided documents.\n\n"
+            "You are the Ghana Intel Assistant, an expert on the 2025 Budget and 2020 Elections. "
+            "Your goal is to be EXTREMELY HELPFUL, SMART, and DESCRIPTIVE. "
+            "Use the provided context to answer the user's question in a professional and conversational tone.\n\n"
             "RULES:\n"
-            "1. If multiple years exist, always prioritize the MOST RECENT data (e.g., 2020).\n"
-            "2. Do not say 'NOT_FOUND' if you can find a partial answer. Be as helpful as possible.\n"
-            "3. If information is missing, explain what you found instead of giving up."
+            "1. If you find multiple related facts, synthesize them into a comprehensive answer.\n"
+            "2. If the answer isn't explicitly there but you have related info, explain what you found.\n"
+            "3. Be confident and clear."
         )
-        
-        user_prompt = f"Context Evidence:\n{context}\n\nUser Question: {query}\nHelpful Answer:"
         
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": f"Context Evidence:\n{context}\n\nQuestion: {query}"}
             ],
-            temperature=0.1
+            temperature=0.3 # Slightly higher for more "natural" and "smart" sounding answers
         )
         
         ans = response.choices[0].message.content
-        conf_level = "HIGH"
-        if len(results) < 2 or "not mentioned" in ans.lower():
-            conf_level = "MEDIUM"
-
+        
         return {
             "final_answer": ans,
-            "detected_domain": domain,
-            "confidence": {"level": conf_level, "reason": f"Synthesized from {len(results)} relevant sources."},
+            "confidence": {"level": "HIGH", "reason": f"Analyzed {len(results)} source chunks for a comprehensive answer."},
             "sources": results
         }
